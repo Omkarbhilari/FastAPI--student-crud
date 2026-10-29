@@ -1,5 +1,5 @@
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException,status
 from pydantic import BaseModel,Field,EmailStr
 
 app = FastAPI()
@@ -11,13 +11,21 @@ class Student(BaseModel):
     email: EmailStr
     course: str = Field(min_length=2, max_length=50)
 
+class StudentResponse(Student):
+    id: int
+    
+
 
 # Temporary storage
 students = {}
 
 
 
-@app.post("/students/{student_id}")
+@app.post(
+    "/students/{student_id}",
+    response_model=StudentResponse,
+    status_code=status.HTTP_201_CREATED
+)
 def create_student(student_id: int, student: Student):
     if student_id in students:
         raise HTTPException(
@@ -25,8 +33,9 @@ def create_student(student_id: int, student: Student):
             detail="Student already exists"
         )
 
-    students[student_id] = student
-    return {"message": "Student created", "student": student}
+    students[student_id] = student.model_dump()
+
+    return {"id": student_id, **students[student_id]}
 
 
 # READ ALL
@@ -44,7 +53,7 @@ def get_student(student_id: int):
             detail="Student not found"
         )
 
-    return students[student_id]
+    return {"id": student_id, **students[student_id]}
 
 
 # UPDATE
